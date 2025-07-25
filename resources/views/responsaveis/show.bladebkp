@@ -1,0 +1,359 @@
+@extends('layouts.default')
+
+@section('title', 'Detalhes do Responsável')
+
+@section('content')
+
+<div class="container mt-4">
+    <!-- 🔹 Cabeçalho -->
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h1>Detalhes do Responsável</h1>
+        <div class="col-auto text-right">
+        <a href="{{ route('responsaveis.index', ['utenteId' => $utenteId]) }}" class="btn btn-primary">
+            <i class="fas fa-arrow-left"></i> Voltar
+        </a>
+    </div>
+    </div>
+
+    <!-- 🔹 Seção Principal -->
+    <div class="card shadow-sm p-4">
+        <div class="row">
+            <!-- 📸 Foto do Responsável -->
+            <div class="col-md-3 text-center">
+                @if($responsavel->foto)
+                    <img src="{{ asset($responsavel->foto) }}" alt="Foto de {{ $responsavel->nome_completo }}" 
+                         class="img-thumbnail shadow-sm rounded" style="max-width: 150px;">
+                @else
+                    <img src="{{ asset('img/anonimoadulto.png') }}" alt="Sem Foto" 
+                         class="img-thumbnail shadow-sm rounded" style="max-width: 150px;">
+                @endif
+                <a href="{{ route('responsaveis.edit', ['utenteId' => $utenteId, 'responsavelId' => $responsavel->id]) }}" 
+                   class="btn btn-warning btn-sm mt-3">
+                    <i class="fas fa-edit"></i> Editar Responsável
+                </a>
+            </div>
+
+            <!-- ℹ️ Informações do Responsável -->
+            <div class="col-md-9">
+                <h3>{{ $responsavel->nome_completo }}</h3>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Identificação:</strong> {{ $responsavel->nr_identificacao }}</p>
+                        <p><strong>Telefone:</strong> {{ $responsavel->contacto }}</p>
+                        <p><strong>Email:</strong> {{ $responsavel->email }}</p>
+                        <p><strong>Grau Parentesco:</strong> {{ $responsavel->grau_parentesco }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Tipo:</strong> {{ $responsavel->tipo_responsavel }}</p>
+                        <p><strong>Estado da Autorização:</strong> 
+                            @if($responsavel->estado_autorizacao == 'Autorizado')
+                                <span class="badge badge-success"><i class="fas fa-check-circle"></i> Autorizado</span>
+                            @elseif($responsavel->estado_autorizacao == 'Autorizacao Expirada')
+                                <span class="badge badge-danger"><i class="fas fa-times-circle"></i> Expirada</span>
+                            @elseif($responsavel->estado_autorizacao == 'Nao Iniciado')
+                                <span class="badge badge-warning"><i class="fas fa-exclamation-circle"></i> Não Iniciado</span>
+                            @endif
+                        </p>
+                        <p><strong>Início da Autorização:</strong> {{ $responsavel->data_inicio_autorizacao ? date('d/m/Y', strtotime($responsavel->data_inicio_autorizacao)) : '-' }}</p>
+                        <p><strong>Fim da Autorização:</strong> {{ $responsavel->data_fim_autorizacao ? date('d/m/Y', strtotime($responsavel->data_fim_autorizacao)) : '-' }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Seção de Crianças Associadas -->
+<div class="card p-3 shadow-sm mt-4">
+    <h3>Crianças Associadas ao Responsável {{ $responsavel->nome_completo }}</h3>
+    @if($criancasAssociadas->isNotEmpty())
+        <ul class="list-group">
+            @foreach($criancasAssociadas as $crianca)
+                <li class="list-group-item">
+                    <a href="{{ url('/hardware/' . $crianca->id) }}">
+                        {{ $crianca->name }} <i class="fas fa-external-link-alt"></i>
+                    </a>
+                </li>
+            @endforeach
+        </ul>
+    @else
+        <p class="text-muted">Nenhuma criança associada.</p>
+    @endif
+</div>
+<!-- Seção de Documentos -->
+@if($responsavel->documentos->isNotEmpty())
+        <div class="card p-3 shadow-sm mt-4">
+            <h3>Documentos Carregados</h3>
+            <div class="row">
+                @foreach($responsavel->documentos as $documento)
+                    <div class="col-md-3 text-center mb-3" id="documento_{{ $documento->id }}">
+                        @php
+                            $extensao = pathinfo($documento->path, PATHINFO_EXTENSION);
+                            $urlDocumento = asset($documento->path);
+                        @endphp
+
+                        @if($extensao === 'pdf')
+                            <!-- Miniatura do PDF -->
+                            <canvas class="pdf-thumbnail border documento-miniatura" data-pdf="{{ $urlDocumento }}"></canvas>
+                        @else
+                            <!-- Miniatura de Imagem -->
+                            <img src="{{ $urlDocumento }}" class="documento-miniatura img-thumbnail" onerror="this.onerror=null; this.src='{{ asset('images/default-document.png') }}';">
+                        @endif
+                        <br>
+                        <button type="button" class="btn btn-primary btn-sm mt-1" onclick="viewDocumentModal('{{ $urlDocumento }}')">
+                            Ver Documento
+                        </button>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @else
+        <p class="text-muted">Nenhum documento anexado.</p>
+    @endif
+
+    <!-- Upload de novo documento -->
+<div class="card p-3 shadow-sm mt-4">
+    <h3>Adicionar Documento</h3>
+    <form id="uploadDocumentoForm" enctype="multipart/form-data">
+        @csrf
+        <input type="hidden" name="responsavel_id" value="{{ $responsavel->id }}">
+        
+        <div class="form-group">
+            <label for="novo_documento">Selecionar Ficheiro</label>
+            <input type="file" class="form-control" id="novo_documento" name="documento" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg">
+        </div>
+
+        <button type="submit" class="btn btn-success">Carregar Documento</button>
+    </form>
+
+    <div id="uploadStatus" class="mt-3"></div>
+</div>
+
+
+    <!-- Modal para visualizar documentos -->
+    <div class="modal fade" id="documentModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog modal-dialog-centered modal-lg" role="document">
+            <div class="modal-content" style="width: 900px; height: 90vh;">
+                <div class="modal-header">
+                    <h5 class="modal-title">Visualizar Documento</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body text-center">
+                    <iframe id="documentViewer" src="" width="100%" height="650px" style="border: none;"></iframe>
+                </div>
+                <div class="modal-footer">
+                    <a id="downloadBtn" href="#" class="btn btn-primary" download target="_blank">Download</a>
+                    <button type="button" class="btn btn-success" onclick="printPDF()">Imprimir</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notas -->
+<div class="card p-3 shadow-sm mt-4">
+    <h3>Notas do Responsável</h3>
+
+    <!-- Formulário para adicionar nota -->
+    <form id="adicionarNotaForm">
+        @csrf
+        <input type="hidden" name="responsavel_id" value="{{ $responsavel->id }}">
+        
+        <div class="form-group">
+            <textarea class="form-control" id="nova_nota" name="nota" rows="3" placeholder="Escreva uma nota..." required></textarea>
+        </div>
+
+        <button type="submit" class="btn btn-success">Adicionar Nota</button>
+    </form>
+
+    <div id="statusNota" class="mt-3"></div>
+
+    <!-- Lista de Notas -->
+    <div id="listaNotas" class="mt-3"></div>
+</div>
+
+
+
+    <!-- 📜 Histórico de Alterações -->
+    <div class="card p-3 shadow-sm mt-4">
+        <h3>Histórico de Alterações</h3>
+        <table class="table table-striped">
+            <thead>
+                <tr>
+                    <th>Data da Modificação</th>
+                    <th>Alterado por</th>
+                    <th>Alteração</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($historicoCompleto as $item)
+                    <tr>
+                        <td>{{ \Carbon\Carbon::parse($item->alterado_em)->format('d/m/Y H:i') }}</td>
+                        <td>{{ $item->first_name ?? 'Desconhecido' }} {{ $item->last_name ?? '' }}</td>
+                        <td>{{ $item->motivo ?? 'Não informado' }}</td>
+                    </tr>
+                @endforeach
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Botão Voltar -->
+    <a href="{{ route('responsaveis.index', ['utenteId' => $utenteId]) }}" class="btn btn-primary btn-sm mt-1">
+        <i class="fa fa-arrow-left"></i> Voltar
+    </a>
+</div>
+
+
+<!-- Biblioteca PDF.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+
+<script>
+// Gerar miniaturas de PDFs
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll(".pdf-thumbnail").forEach(canvas => {
+        const pdfUrl = canvas.getAttribute("data-pdf");
+
+        if (pdfUrl) {
+            pdfjsLib.getDocument(pdfUrl).promise.then(pdf => {
+                pdf.getPage(1).then(page => {
+                    const scale = 0.5;
+                    const viewport = page.getViewport({ scale });
+                    const context = canvas.getContext("2d");
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+
+                    const renderContext = {
+                        canvasContext: context,
+                        viewport: viewport
+                    };
+                    page.render(renderContext);
+                });
+            }).catch(error => {
+                console.error("Erro ao carregar PDF:", error);
+            });
+        }
+    });
+});
+
+// Abrir Documento no Modal
+function viewDocumentModal(url) {
+    document.getElementById("documentViewer").src = url;
+    document.getElementById("downloadBtn").href = url;
+    $("#documentModal").modal("show");
+}
+
+// Imprimir PDF
+function printPDF() {
+    const iframe = document.getElementById("documentViewer");
+    iframe.contentWindow.print();
+}
+
+$(document).ready(function () {
+    $("#uploadDocumentoForm").on("submit", function (e) {
+        e.preventDefault();
+
+        let formData = new FormData(this);
+        let uploadStatus = $("#uploadStatus");
+
+        $.ajax({
+            url: "{{ route('responsaveis.uploadDocumento', ['utenteId' => $utenteId, 'responsavelId' => $responsavel->id]) }}",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            beforeSend: function () {
+                uploadStatus.html('<span class="text-info">Carregando documento...</span>');
+            },
+            success: function (response) {
+                if (response.success) {
+                    uploadStatus.html('<span class="text-success">Documento carregado com sucesso!</span>');
+                    setTimeout(() => location.reload(), 2000); // Recarregar a página para atualizar a lista
+                } else {
+                    uploadStatus.html('<span class="text-danger">' + response.message + '</span>');
+                }
+            },
+            error: function () {
+                uploadStatus.html('<span class="text-danger">Erro ao carregar documento.</span>');
+            }
+        });
+    });
+});
+
+$(document).ready(function () {
+    let listaNotas = $("#listaNotas");
+
+    // Carregar Notas ao abrir a página
+    function carregarNotas() {
+        $.ajax({
+            url: "{{ route('responsaveis.carregarNotas', ['utenteId' => $utenteId, 'responsavelId' => $responsavel->id]) }}",
+            type: "GET",
+            success: function (response) {
+                listaNotas.empty();
+
+                if (response.length === 0) {
+                    listaNotas.html('<p class="text-muted">Nenhuma nota adicionada.</p>');
+                    return;
+                }
+
+                response.forEach(nota => {
+                    let dataNota = new Date(nota.created_at).toLocaleString("pt-PT");
+                    listaNotas.append(`
+                        <div class="card p-2 mb-2">
+                            <p class="mb-1">${nota.nota}</p>
+                            <small class="text-muted">Por ${nota.usuario?.first_name ?? 'Desconhecido'} ${nota.usuario?.last_name ?? ''} em ${dataNota}</small>
+                        </div>
+                    `);
+                });
+            },
+            error: function () {
+                listaNotas.html('<p class="text-danger">Erro ao carregar notas.</p>');
+            }
+        });
+    }
+
+    carregarNotas();
+
+    // Adicionar nova nota
+    $("#adicionarNotaForm").on("submit", function (e) {
+        e.preventDefault();
+
+        let formData = $(this).serialize();
+        let statusNota = $("#statusNota");
+
+        $.ajax({
+            url: "{{ route('responsaveis.adicionarNota', ['utenteId' => $utenteId, 'responsavelId' => $responsavel->id]) }}",
+            type: "POST",
+            data: formData,
+            success: function (response) {
+                if (response.success) {
+                    statusNota.html('<span class="text-success">Nota adicionada com sucesso!</span>');
+                    $("#nova_nota").val("");
+                    carregarNotas(); // Atualizar a lista de notas
+                } else {
+                    statusNota.html('<span class="text-danger">Erro ao adicionar nota.</span>');
+                }
+            },
+            error: function () {
+                statusNota.html('<span class="text-danger">Erro ao adicionar nota.</span>');
+            }
+        });
+    });
+});
+
+
+</script>
+
+
+<style>
+    .documento-miniatura {
+        width: 170px;
+        height: 210px;
+        object-fit: cover;
+    }
+</style>
+
+<div style="padding-bottom: 80px;"></div>
+
+@endsection
