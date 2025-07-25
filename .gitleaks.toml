@@ -1,0 +1,10 @@
+# Regra para ignorar a chave privada de exemplo em ldap.blade.php (FALSO POSITIVO)
+# Este ficheiro pode não existir na sua instalação, mas o Gitleaks pode detetá-lo em caches ou builds.
+[[rules]]
+description = "Ignore example Private Key in LDAP blade file"
+regex = '''-----BEGIN RSA PRIVATE KEY-----'.\"\\r\\n1234567890\\r\\n-----END RSA PRIVATE KEY----'''
+paths = [
+  '''resources/views/settings/ldap.blade.php''', # O caminho onde o Gitleaks alegou encontrá-lo
+]
+tags = ["false-positive", "known-example"]
+entropy = 0.0 # Define para zero para garantir que é ignorado
