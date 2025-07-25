@@ -133,7 +133,7 @@
 
                 <p>Os utilizadores podem redistribuir e/ou modificar esta aplicação sob os termos da AGPL v3.</p>
 
-                <p>O **código-fonte modificado** está publicamente disponível no nosso repositório GitHub: <a href="https://github.com/Junta-de-Freguesia-do-Parque-das-Nacoes/snipeit-parque-seguro" target="_blank" rel="noopener noreferrer">github.com/Junta-de-Freguesia-do-Parque-das-Nacoes/snipeit-parque-seguro</a>. Para mais informações, pode também contactar: <a href="mailto:nsi@jf-parquedasnacoes.pt">nsi@jf-parquedasnacoes.pt</a>.</p>
+                <p>O **código-fonte modificado** está publicamente disponível no nosso repositório GitHub: <a href="https://github.com/Junta-de-Freguesia-do-Parque-das-Nacoes/parque-seguro" target="_blank" rel="noopener noreferrer">github.com/Junta-de-Freguesia-do-Parque-das-Nacoes/parque-seguro</a>. Para mais informações, pode também contactar: <a href="mailto:nsi@jf-parquedasnacoes.pt">nsi@jf-parquedasnacoes.pt</a>.</p>
 
                 <p class="text-muted"><small>Junta de Freguesia do Parque das Nações © 2016–{{ date('Y') }}. Todos os direitos reservados.</small></p>
             </div>

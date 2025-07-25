@@ -32,7 +32,7 @@ Este projeto baseia-se no Snipe-IT e é distribuído sob a licença [GNU Affero 
 
 Para mais informações sobre o projeto, ou para aceder ao código-fonte modificado, visite o nosso repositório GitHub público:
 
-🔗 **[https://github.com/Junta-de-Freguesia-do-Parque-das-Nacoes/snipeit-parque-seguro](https://github.com/Junta-de-Freguesia-do-Parque-das-Nacoes/snipeit-parque-seguro)**
+🔗 **[https://github.com/Junta-de-Freguesia-do-Parque-das-Nacoes/parque-seguro](https://github.com/Junta-de-Freguesia-do-Parque-das-Nacoes/parque-seguro)**
 
 Pode também contactar-nos por email para outras questões:
 
