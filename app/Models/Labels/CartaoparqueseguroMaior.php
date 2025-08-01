@@ -117,13 +117,8 @@ class CartaoparqueseguroMaior extends RectangleSheet
         $settings = Setting::getSettings();
 
         // Pegar o nome completo do aluno
-        $fullName = $asset->name;
-        $nameParts = explode(" ", $fullName);
-        $firstName = $nameParts[0];
-        $lastName = end($nameParts);
+     $displayName = $asset->nome_apelido ?? $asset->name;
 
-        // Exibir apenas o primeiro e o último nome na etiqueta
-        $displayName = $firstName . ' ' . $lastName;
 
         // Inicializa as variáveis de posição
         $textY = 0;

@@ -33,6 +33,8 @@ class Kernel extends ConsoleKernel
     // Recolha automática de utentes com modos distintos
     $schedule->command('utentes:reset --modo=10h')->dailyAt('10:00');
     $schedule->command('utentes:reset --modo=21h')->dailyAt('21:00');
+    $schedule->command('apelido:atualizar')->hourly()->between('8:00', '18:00');
+
 }
 
     /**

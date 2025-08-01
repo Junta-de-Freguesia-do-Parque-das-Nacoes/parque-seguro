@@ -157,7 +157,8 @@ return [
     */
 
     'secure' => env('SECURE_COOKIES', false),
-    'same_site' => 'None',
+    'http_only' => true, // Esta é a linha adicionada para corrigir o problema do httponly
+    'same_site' => 'None', // A vírgula anterior é que faltava
     /*
     |--------------------------------------------------------------------------
     | Bootstrap Table Storage Type
