@@ -147,12 +147,81 @@
     <div class="container">
         <h1>Notificação de Entrada para {{ $utente->nome_apelido }}</h1>
 
-    
+   
+@php
+use Carbon\Carbon;
+use Illuminate\Support\Str;
 
-<!-- Local (Escola ou Evento) -->
-@if (!empty($utente->company))
-<p><strong>Escola/Programas:</strong> {{ is_array($utente->company) ? ($utente->company['name'] ?? 'Local não disponível') : ($utente->company->name ?? 'Local não disponível') }}</p>
-@endif
+// Data atual
+$hoje = Carbon::today();
+
+// Nomes fixos de programas com ícones (se quiseres personalizar)
+$programasCheckbox = [
+    '_snipeit_ha_ferias_no_parque_67' => 'Há Férias no Parque',
+    '_snipeit_parque_em_movimento_verao_68' => 'Parque em Movimento Verão',
+    '_snipeit_parque_em_movimento_pascoa_69' => 'Parque em Movimento Páscoa',
+    '_snipeit_aaaf_caf_ferias_pascoa_70' => 'AAAF/CAF Férias Páscoa',
+    '_snipeit_aaaf_caf_ferias_verao_71' => 'AAAF/CAF Férias Verão',
+    '_snipeit_parque_em_movimento_natal_72' => 'Parque em Movimento Natal',
+    '_snipeit_aaaf_caf_ferias_carnaval_73' => 'AAAF/CAF Férias Carnaval',
+];
+
+// Lista de programas ativos hoje
+$programasHoje = [];
+
+foreach ($utente->getAttributes() as $campo => $valor) {
+    if (
+        (Str::startsWith($campo, '_snipeit_programa_') || array_key_exists($campo, $programasCheckbox))
+        && !empty($valor)
+    ) {
+        // Nome do programa
+        if (isset($programasCheckbox[$campo])) {
+            $nomePrograma = $programasCheckbox[$campo];
+        } else {
+            $nomeRaw = Str::beforeLast(Str::after($campo, '_snipeit_programa_'), '_');
+            $nomePrograma = ucwords(str_replace('_', ' ', $nomeRaw));
+        }
+
+        // Verificar datas
+        $datas = collect(preg_split('/[\r\n,]+/', $valor))
+            ->map(fn($d) => trim($d))
+            ->filter()
+            ->flatMap(function ($item) {
+                if (preg_match('/(\d{2}\/\d{2}\/\d{4})\s*[-a]\s*(\d{2}\/\d{2}\/\d{4})/', $item, $m)) {
+                    try {
+                        $di = Carbon::createFromFormat('d/m/Y', trim($m[1]));
+                        $df = Carbon::createFromFormat('d/m/Y', trim($m[2]));
+                        return collect()->range(0, $di->diffInDays($df))->map(fn($i) => $di->copy()->addDays($i));
+                    } catch (\Exception $e) {
+                        return collect();
+                    }
+                }
+                try {
+                    return collect([Carbon::createFromFormat('d/m/Y', $item)]);
+                } catch (\Exception $e) {
+                    return collect();
+                }
+            });
+
+        if ($datas->contains(fn($d) => $d->isSameDay($hoje))) {
+            $programasHoje[] = $nomePrograma;
+        }
+    }
+}
+@endphp
+
+
+<p><strong>Escola/Programas:</strong>
+    {{ is_array($utente->company) ? ($utente->company['name'] ?? 'Local não disponível') : ($utente->company->name ?? 'Local não disponível') }}
+    @if (!empty($programasHoje))
+        — {{ implode(', ', $programasHoje) }}
+    @endif
+</p>
+
+
+
+
+
 
         <!-- Alerta de incidente para Check-in -->
         @if ($manutencao)

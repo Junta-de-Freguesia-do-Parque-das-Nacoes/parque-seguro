@@ -103,7 +103,7 @@
     @endforeach
   </select>
   <div id="confirmCartaoMsg" style="display:none; position: relative; margin-left: 15px;">
-  <div style="
+      <div style="
   position: absolute;
   top: -15px;
   left: 40px;
@@ -119,10 +119,23 @@
   z-index: 1;
 ">
   🤖 NSI diz que o Tipo de cartão para impressão foi alterado com sucesso 😜
-</div>
+    </div>
 
   <div style="font-size: 1.5rem;">🤖</div>
 </div>
+{{-- Botão de envio dos cartões selecionados --}}
+<div class="toolbar d-flex justify-content-end">
+    <form id="formEnviarCartoesSelecionados" method="POST" action="{{ route('cartoes.enviar.selecionados') }}">
+        @csrf
+        <input type="hidden" name="ids_selecionados" id="idsSelecionados">
+        <input type="hidden" name="template" id="templateSelecionado">
+        <button type="submit" class="btn btn-success" id="enviarCartoesBtn">
+            <i class="fas fa-envelope-open-text" aria-hidden="true"></i> Enviar Cartões para Utentes (EE) Selecionados
+        </button>
+    </form>
+</div>
+
+
 
 </div>
 
@@ -170,84 +183,131 @@
     </div>
   </div>
 </div>
+<div id="spinnerEnvioCartoes" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+    background-color: rgba(255, 255, 255, 0.7); z-index: 9999; text-align: center; padding-top: 200px;">
+    <div class="spinner-border text-success" role="status" style="width: 4rem; height: 4rem;"></div>
+    <div style="margin-top: 1rem; font-size: 1.5rem;">A enviar cartões...</div>
+</div>
+
 @stop
 
 @section('moar_scripts')
   @include('partials.bootstrap-table')
 
-  <script>
-  $(document).ready(function () {
-    function refreshTable() {
-      var baseUrl = '{{ route('api.assets.index') }}';
-      var params = [];
+<script>
+    $(document).ready(function () {
+        function refreshTable() {
+            var baseUrl = '{{ route('api.assets.index') }}';
+            var params = [];
+            var programa = $('#programaSelect').val();
+            var semEe = $('#eeSelect').val();
 
-      var programa = $('#programaSelect').val();
-      var semEe = $('#eeSelect').val(); // <- novo campo
+            if (programa) {
+                params.push('programa=' + encodeURIComponent(programa));
+            }
 
-      if (programa) {
-        params.push('programa=' + encodeURIComponent(programa));
-      }
+            if (semEe) {
+                params.push('sem_ee=' + encodeURIComponent(semEe));
+            }
 
-      if (semEe) {
-        params.push('sem_ee=' + encodeURIComponent(semEe));
-      }
+            var finalUrl = baseUrl;
+            if (params.length > 0) {
+                finalUrl += '?' + params.join('&');
+            }
 
-      var finalUrl = baseUrl;
-      if (params.length > 0) {
-        finalUrl += '?' + params.join('&');
-      }
+            $('#assetsListingTable').bootstrapTable('refresh', {
+                url: finalUrl
+            });
+        }
 
-      $('#assetsListingTable').bootstrapTable('refresh', {
-        url: finalUrl
-      });
-    }
+        $('#programaSelect, #eeSelect').on('change', refreshTable);
 
-    // Eventos de mudança nos selects
-    $('#programaSelect').on('change', refreshTable);
-    $('#eeSelect').on('change', refreshTable);
+        const tipoSelect = document.getElementById('tipoCartaoSelect');
+        const valorAtual = '{{ \App\Models\Setting::first()->label2_template ?? '' }}';
+        if (valorAtual && tipoSelect) tipoSelect.value = valorAtual;
 
-    // Lógica do tipoCartaoSelect (mantém tudo como estava)
-    const tipoSelect = document.getElementById('tipoCartaoSelect');
-    const valorAtual = '{{ \App\Models\Setting::first()->label2_template ?? '' }}';
-    if (valorAtual && tipoSelect) tipoSelect.value = valorAtual;
+        tipoSelect?.addEventListener('change', function () {
+            const valor = tipoSelect.value;
+            if (!valor) return;
 
-    tipoSelect?.addEventListener('change', function () {
-      const valor = tipoSelect.value;
-      if (!valor) return;
+            fetch("{{ route('settings.saveLabelTemplate') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify({ label2_template: valor })
+            })
+            .then(() => {
+                const msg = document.getElementById('confirmCartaoMsg');
+                msg.style.opacity = 0;
+                msg.style.display = 'inline-block';
 
-      fetch("{{ route('settings.saveLabelTemplate') }}", {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-CSRF-TOKEN': '{{ csrf_token() }}'
-        },
-        body: JSON.stringify({ label2_template: valor })
-      })
-      .then(() => {
-        const msg = document.getElementById('confirmCartaoMsg');
-        msg.style.opacity = 0;
-        msg.style.display = 'inline-block';
+                setTimeout(() => {
+                    msg.style.transition = 'opacity 0.5s';
+                    msg.style.opacity = 1;
+                }, 10);
 
-        // Fade in
-        setTimeout(() => {
-          msg.style.transition = 'opacity 0.5s';
-          msg.style.opacity = 1;
-        }, 10);
+                setTimeout(() => {
+                    msg.style.opacity = 0;
+                    setTimeout(() => {
+                        msg.style.display = 'none';
+                    }, 500);
+                }, 3000);
+            })
+            .catch(error => {
+                console.error(error);
+                alert('Erro ao gravar tipo de cartão.');
+            });
+        });
 
-        // Fade out
-        setTimeout(() => {
-          msg.style.opacity = 0;
-          setTimeout(() => {
-            msg.style.display = 'none';
-          }, 500);
-        }, 3000);
-      })
-      .catch(error => {
-        console.error(error);
-        alert('Erro ao gravar tipo de cartão.');
-      });
+        // Submissão do formulário de envio de cartões selecionados
+        $('#formEnviarCartoesSelecionados').on('submit', function (e) {
+            e.preventDefault(); // This is the correct line to prevent page reload
+
+            const selectedRows = $('#assetsListingTable').bootstrapTable('getSelections');
+
+            if (selectedRows.length === 0) {
+                alert('Selecione pelo menos um utente.');
+                return;
+            }
+
+            if (!confirm('Tem certeza de que quer enviar os cartões por email aos utentes selecionados?')) {
+                return;
+            }
+
+            const ids = selectedRows.map(r => r.id);
+            const templateSelecionado = $('#tipoCartaoSelect').val();
+
+            // Show the spinner
+            $('#spinnerEnvioCartoes').show();
+
+            // Perform the AJAX request
+            $.ajax({
+                url: $(this).attr('action'),
+                type: 'POST',
+                data: {
+                    _token: '{{ csrf_token() }}',
+                    ids_selecionados: ids.join(','),
+                    template: templateSelecionado
+                },
+                success: function(response) {
+                    // Hide the spinner on success
+                    $('#spinnerEnvioCartoes').hide();
+                    alert('Os cartões foram enviados para a fila de processamento. A notificação pode demorar um pouco.');
+                    // Refresh the table to update the items' status if necessary
+                    refreshTable();
+                },
+                error: function(xhr) {
+                    // Hide the spinner on error
+                    $('#spinnerEnvioCartoes').hide();
+                    alert('Ocorreu um erro ao enviar os cartões. Por favor, tente novamente.');
+                    console.error(xhr.responseText);
+                }
+            });
+        });
     });
-  });
 </script>
+
 
 @stop

@@ -50,7 +50,9 @@ use App\Http\Controllers\ProgramaController;
 use App\Http\Controllers\EeAuthController;
 use App\Http\Controllers\EeResponsavelController;
 use App\Http\Controllers\NotificacaoBackofficeController;
+use App\Http\Controllers\CartaoController;
 use App\Mail\CheckoutNotificationMail;
+
 
 Route::get('/responsaveis/foto/{filename}', function ($filename) {
     $path = public_path("uploads/responsaveis/fotos/{$filename}");
@@ -103,6 +105,7 @@ Route::get('/responsaveis/documento/{filename}', function ($filename, Request $r
 })->name('responsaveis.documento')->middleware('auth');
 
 
+Route::post('/cartoes/enviar-selecionados', [App\Http\Controllers\CartaoController::class, 'enviarSelecionados']) ->name('cartoes.enviar.selecionados');
 
 
 

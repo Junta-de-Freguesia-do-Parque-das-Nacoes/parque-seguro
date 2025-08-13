@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema; 
+use Illuminate\Support\Str;
 use App\Models\Asset;
 use App\Models\Company;
 use Carbon\Carbon;
@@ -29,15 +31,35 @@ class ScannerController extends Controller
         ->get();
 
     // Programas personalizados baseados em campos de inscrição
-    $programasCheckbox = [
-        '_snipeit_ha_ferias_no_parque_67' => 'Há Férias no Parque',
-        '_snipeit_parque_em_movimento_verao_68' => 'Parque em Movimento Verão',
-        '_snipeit_parque_em_movimento_pascoa_69' => 'Parque em Movimento Páscoa',
-        '_snipeit_aaaf_caf_ferias_pascoa_70' => 'AAAF/CAF Férias Páscoa',
-        '_snipeit_aaaf_caf_ferias_verao_71' => 'AAAF/CAF Férias Verão',
-        '_snipeit_parque_em_movimento_natal_72' => 'Parque em Movimento Natal',
-        '_snipeit_aaaf_caf_ferias_carnaval_73' => 'AAAF/CAF Férias Carnaval',
-    ];
+    // Começa com os programas fixos
+$programasCheckbox = [
+    '_snipeit_ha_ferias_no_parque_67' => 'Há Férias no Parque',
+    '_snipeit_parque_em_movimento_verao_68' => 'Parque em Movimento Verão',
+    '_snipeit_parque_em_movimento_pascoa_69' => 'Parque em Movimento Páscoa',
+    '_snipeit_aaaf_caf_ferias_pascoa_70' => 'AAAF/CAF Férias Páscoa',
+    '_snipeit_aaaf_caf_ferias_verao_71' => 'AAAF/CAF Férias Verão',
+    '_snipeit_parque_em_movimento_natal_72' => 'Parque em Movimento Natal',
+    '_snipeit_aaaf_caf_ferias_carnaval_73' => 'AAAF/CAF Férias Carnaval',
+];
+
+// Acrescenta dinamicamente todos os campos que comecem por "_snipeit_programa_"
+$colunasAssets = Schema::getColumnListing('assets');
+foreach ($colunasAssets as $coluna) {
+    if (Str::startsWith($coluna, '_snipeit_programa_') && !array_key_exists($coluna, $programasCheckbox)) {
+        $nomeRaw = str_replace('_snipeit_programa_', '', $coluna);
+$partes = explode('_', $nomeRaw);
+
+// Remover o último elemento se for número
+if (is_numeric(end($partes))) {
+    array_pop($partes);
+}
+
+// Juntar o nome novamente com espaços
+$nomeFormatado = ucwords(implode(' ', $partes));
+
+        $programasCheckbox[$coluna] = $nomeFormatado;
+    }
+}
 
     $hoje = \Carbon\Carbon::today();
     $dadosProgramas = [];
@@ -108,13 +130,14 @@ class ScannerController extends Controller
             });
     }
 
-    public function showPresenceDetails(Request $request)
+   public function showPresenceDetails(Request $request)
 {
     $schoolId = $request->input('school_id'); // Pode ser company_id ou nome de campo personalizado
     $statusId = $request->input('status_id');
     $search = $request->input('search');
+    $hoje = \Carbon\Carbon::today();
 
-    // Lista dos campos personalizados dos programas
+    // 1. Programas com nomes conhecidos
     $programasCheckbox = [
         '_snipeit_ha_ferias_no_parque_67' => 'Há Férias no Parque',
         '_snipeit_parque_em_movimento_verao_68' => 'Parque em Movimento Verão',
@@ -125,48 +148,66 @@ class ScannerController extends Controller
         '_snipeit_aaaf_caf_ferias_carnaval_73' => 'AAAF/CAF Férias Carnaval',
     ];
 
-    $hoje = \Carbon\Carbon::today();
+    // 2. Adicionar dinamicamente os campos do tipo "_snipeit_programa_*"
+    $colunasAssets = \Schema::getColumnListing('assets');
+    foreach ($colunasAssets as $coluna) {
+        if (Str::startsWith($coluna, '_snipeit_programa_') && !array_key_exists($coluna, $programasCheckbox)) {
+            $nomeRaw = str_replace('_snipeit_programa_', '', $coluna);
+$partes = explode('_', $nomeRaw);
 
-    // Verifica se é um programa (campo personalizado)
+// Remover o último elemento se for número
+if (is_numeric(end($partes))) {
+    array_pop($partes);
+}
+
+// Juntar o nome novamente com espaços
+$nomeFormatado = ucwords(implode(' ', $partes));
+
+            $programasCheckbox[$coluna] = $nomeFormatado;
+        }
+    }
+
+    // 3. Verifica se é um programa (campo personalizado)
     if (array_key_exists($schoolId, $programasCheckbox)) {
         $nomePrograma = $programasCheckbox[$schoolId];
 
-        $query = Asset::whereNotNull($schoolId)
-            ->where(function ($q) use ($schoolId, $hoje) {
-                $assets = \App\Http\Controllers\ScannerController::expandirDatasPublic(); // Função auxiliar abaixo
-                $q->whereRaw("1 = 1"); // Garante a sintaxe
-            })
+        // Obter todos os alunos com esse campo preenchido
+        $alunos = Asset::whereNotNull($schoolId)
+            ->whereIn('status_id', [23, 25])
             ->get()
             ->filter(function ($asset) use ($schoolId, $hoje) {
                 $datas = ScannerController::expandirDatasPublic($asset->$schoolId);
                 return $datas->contains(fn($d) => $d->isSameDay($hoje));
             });
 
-        // Aplica filtros manuais
+        // Aplica filtros adicionais
         if ($statusId) {
-            $query = $query->where('status_id', $statusId);
+            $alunos = $alunos->where('status_id', $statusId);
         }
 
         if (!empty($search)) {
-            $query = $query->filter(fn($a) => stripos($a->name, $search) !== false);
+            $alunos = $alunos->filter(fn($a) => stripos($a->name, $search) !== false);
         }
 
         return view('presence-details', [
-            'assets' => $query,
+            'assets' => $alunos,
             'schoolName' => $nomePrograma,
             'status_id' => $statusId,
             'search' => $search,
         ]);
     }
 
-    // Caso contrário, continua como escola
+    // 4. Caso contrário, assume escola (company_id)
     $school = Company::find($schoolId);
     if (!$school) {
         return redirect()->back()->with('error', 'Escola não encontrada.');
     }
 
-    $query = Asset::where('company_id', $schoolId)
-        ->where('status_id', $statusId);
+    $query = Asset::where('company_id', $schoolId);
+
+    if ($statusId) {
+        $query->where('status_id', $statusId);
+    }
 
     if (!empty($search)) {
         $query->where('name', 'LIKE', "%$search%");
@@ -183,13 +224,15 @@ class ScannerController extends Controller
 }
 
 
+
 public function showPresenceAbsences(Request $request)
 {
     $schoolId = $request->get('school_id');
     $statusId = $request->get('status_id');
     $search = $request->get('search');
+    $hoje = now();
 
-    // Carregar escolas com utentes ativos (status 23 ou 25)
+    // 1. Escolas com utentes ativos
     $schools = \App\Models\Company::whereHas('assets', function ($query) {
             $query->whereIn('status_id', [23, 25]);
         })
@@ -203,7 +246,7 @@ public function showPresenceAbsences(Request $request)
             ];
         });
 
-    // Lista dos programas e nomes
+    // 2. Programas fixos
     $programasCheckbox = [
         '_snipeit_ha_ferias_no_parque_67' => 'Há Férias no Parque',
         '_snipeit_parque_em_movimento_verao_68' => 'Parque em Movimento Verão',
@@ -214,9 +257,20 @@ public function showPresenceAbsences(Request $request)
         '_snipeit_aaaf_caf_ferias_carnaval_73' => 'AAAF/CAF Férias Carnaval',
     ];
 
-    $hoje = now();
-    $programas = collect();
+    // 3. Programas dinâmicos com ícone e nome formatado
+    $colunasAssets = \Schema::getColumnListing('assets');
+    foreach ($colunasAssets as $coluna) {
+        if (Str::startsWith($coluna, '_snipeit_programa_') && !array_key_exists($coluna, $programasCheckbox)) {
+            $nomeRaw = str_replace('_snipeit_programa_', '', $coluna);
+            $partes = explode('_', $nomeRaw);
+            if (is_numeric(end($partes))) array_pop($partes);
+            $nomeFormatado = '' . ucwords(implode(' ', $partes));
+            $programasCheckbox[$coluna] = $nomeFormatado;
+        }
+    }
 
+    // 4. Programas ativos hoje
+    $programas = collect();
     foreach ($programasCheckbox as $campo => $nome) {
         $utentes = \App\Models\Asset::whereNotNull($campo)
             ->whereIn('status_id', [23, 25])
@@ -235,10 +289,10 @@ public function showPresenceAbsences(Request $request)
         }
     }
 
-    // Juntar escolas e programas com dados
+    // 5. Juntar escolas + programas
     $schools = $schools->merge($programas);
 
-    // Buscar alunos
+    // 6. Query base
     $query = \App\Models\Asset::query();
 
     if ($statusId) {
@@ -260,13 +314,18 @@ public function showPresenceAbsences(Request $request)
         $query = $query->with('company')->orderBy('name')->get();
     }
 
-    // Se query virou Collection (programa), deixar como está. Senão, get()
+    // 7. Resultado final
     $alunos = $query instanceof \Illuminate\Support\Collection ? $query : $query->with('company')->orderBy('name')->get();
-
     $status = $statusId == 23 ? 'Presentes' : ($statusId == 25 ? 'Ausentes' : 'Todos');
+    $schoolName = null;
 
-    return view('presencas_ausencias', compact('alunos', 'schools', 'status', 'search'));
+    if ($schoolId && !is_numeric($schoolId)) {
+        $schoolName = $schools->firstWhere('id', $schoolId)?->name ?? null;
+    }
+
+    return view('presencas_ausencias', compact('alunos', 'schools', 'status', 'search', 'schoolName'));
 }
+
 
     public static function expandirDatasPublic($stringDatas = '')
 {

@@ -28,8 +28,8 @@
         color: white;
     }
 
-    .card-green { background-color: #4CAF50; } /* Verde para Presentes */
-    .card-orange { background-color: #FFA500; } /* Laranja para Ausentes */
+    .card-green { background-color: #4CAF50; }
+    .card-orange { background-color: #FFA500; }
     
     .card img {
         width: 100%;
@@ -100,7 +100,6 @@
         background-color: #bbb;
     }
 
-    /* LEGENDA */
     .legend {
         display: flex;
         justify-content: center;
@@ -127,12 +126,44 @@
 
 @section('content')
 
+@php
+use App\Http\Controllers\ScannerController;
+use Illuminate\Support\Str;
+
+$programasCheckbox = [
+    '_snipeit_ha_ferias_no_parque_67' => 'Há Férias no Parque',
+    '_snipeit_parque_em_movimento_verao_68' => 'Parque em Movimento Verão',
+    '_snipeit_parque_em_movimento_pascoa_69' => 'Parque em Movimento Páscoa',
+    '_snipeit_aaaf_caf_ferias_pascoa_70' => 'AAAF/CAF Férias Páscoa',
+    '_snipeit_aaaf_caf_ferias_verao_71' => 'AAAF/CAF Férias Verão',
+    '_snipeit_parque_em_movimento_natal_72' => 'Parque em Movimento Natal',
+    '_snipeit_aaaf_caf_ferias_carnaval_73' => 'AAAF/CAF Férias Carnaval',
+];
+
+// Adicionar dinamicamente os campos novos
+foreach (\Schema::getColumnListing('assets') as $coluna) {
+    if (
+        Str::startsWith($coluna, '_snipeit_programa_') &&
+        !array_key_exists($coluna, $programasCheckbox)
+    ) {
+        $nomeRaw = str_replace('_snipeit_programa_', '', $coluna);
+        $partes = explode('_', $nomeRaw);
+        if (is_numeric(end($partes))) {
+            array_pop($partes);
+        }
+        $nomeFormatado = ucwords(implode(' ', $partes));
+        $programasCheckbox[$coluna] = $nomeFormatado;
+    }
+}
+
+$hoje = \Carbon\Carbon::now('Europe/Lisbon')->startOfDay();
+@endphp
+
 <h1>Lista de {{ $status }}</h1>
 <p style="text-align: center; font-size: 1em; color: #555; margin-top: -10px;">
     Data: {{ \Carbon\Carbon::now()->format('d/m/Y') }}
 </p>
 
-<!-- LEGENDA -->
 <div class="legend">
     <div class="legend-item">
         <div class="legend-color legend-green"></div> <span>Presente</span>
@@ -142,16 +173,14 @@
     </div>
 </div>
 
-<!-- FILTROS -->
 <div class="filters">
     <form method="GET" action="{{ route('presencas.ausencias') }}">
         <select name="school_id">
             <option value="">Todas os locais</option>
             @foreach($schools as $school)
-            <option value="{{ $school->id }}" {{ request('school_id') == $school->id ? 'selected' : '' }}>
-    {{ $school->is_program ? '📅 ' : '🏫 ' }}{{ $school->name }}
-</option>
-
+                <option value="{{ $school->id }}" {{ request('school_id') == $school->id ? 'selected' : '' }}>
+                    {{ $school->is_program ? '📅 ' : '🏫 ' }}{{ $school->name }}
+                </option>
             @endforeach
         </select>
 
@@ -162,7 +191,6 @@
         </select>
 
         <input type="text" name="search" value="{{ request('search') }}" placeholder="Pesquisar aluno...">
-        
         <button type="submit">Pesquisar</button>
 
         @if(request('search') || request('school_id') || request('status_id'))
@@ -171,20 +199,39 @@
     </form>
 </div>
 
-<!-- LISTA DE ALUNOS -->
 @if($alunos->isEmpty())
     <p style="text-align: center; color: red;">Não há registros de {{ $status }} no momento.</p>
 @else
     <div class="cards">
         @foreach($alunos as $aluno)
+            @php
+                $programasHoje = [];
+                foreach ($programasCheckbox as $campo => $nome) {
+                    if (!empty($aluno->$campo)) {
+                        $datas = ScannerController::expandirDatasPublic($aluno->$campo)
+                            ->map(fn($d) => \Carbon\Carbon::parse($d));
+                        if ($datas->contains(fn($d) => $d->isSameDay($hoje))) {
+                            $programasHoje[] = $nome;
+                        }
+                    }
+                }
+            @endphp
+
             <div class="card {{ $aluno->status_id == 23 ? 'card-green' : ($aluno->status_id == 25 ? 'card-orange' : '') }}">
-                <a href="https://parque-seguro.jf-parquedasnacoes.pt:8126/hardware/{{ $aluno->id }}" 
-                   target="_blank" 
-                   style="text-decoration: none; color: inherit;">
-                   <img src="{{ $aluno->image ? route('assets.foto', ['filename' => basename($aluno->image)]) : asset('img/anoninochild.jpg') }}" alt="{{ $aluno->name }}">
+                <a href="https://parque-seguro.jf-parquedasnacoes.pt:8126/hardware/{{ $aluno->id }}" target="_blank" style="text-decoration: none; color: inherit;">
+                    <img src="{{ $aluno->image ? route('assets.foto', ['filename' => basename($aluno->image)]) : asset('img/anoninochild.jpg') }}" alt="{{ $aluno->name }}">
                     <div class="details">
                         <h3>{{ $aluno->name }}</h3>
-                        <p>Escola/Programa: {{ $aluno->company->name ?? 'Não definida' }}</p>
+
+                        @foreach($programasHoje as $programa)
+                            <p>📅 {{ $programa }}</p>
+                        @endforeach
+
+                        @if($aluno->company)
+                            <p>🏫 {{ $aluno->company->name }}</p>
+                        @else
+                            <p>❓ Escola não definida</p>
+                        @endif
                     </div>
                 </a>
             </div>

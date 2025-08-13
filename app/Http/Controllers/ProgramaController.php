@@ -7,6 +7,9 @@ use App\Models\CustomField;
 use Illuminate\Http\Request;
 use App\Exports\ProgramaExport;
 use Maatwebsite\Excel\Facades\Excel;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
+
 
 
 class ProgramaController extends Controller
@@ -78,17 +81,36 @@ class ProgramaController extends Controller
 
 
     private function getProgramFields()
-    {
-        return [
-            '_snipeit_ha_ferias_no_parque_67' => 'Há Férias No Parque',
-            '_snipeit_parque_em_movimento_verao_68' => 'Parque em Movimento Verão',
-            '_snipeit_parque_em_movimento_pascoa_69' => 'Parque em Movimento Páscoa',
-            '_snipeit_aaaf_caf_ferias_pascoa_70' => 'AAAF/CAF Férias Páscoa',
-            '_snipeit_aaaf_caf_ferias_verao_71' => 'AAAF/CAF Férias Verão',
-            '_snipeit_parque_em_movimento_natal_72' => 'Parque em Movimento Natal',
-            '_snipeit_aaaf_caf_ferias_carnaval_73' => 'AAAF/CAF Férias Carnaval',
-        ];
+{
+    // Programas atuais fixos
+    $fixed = [
+        '_snipeit_ha_ferias_no_parque_67' => 'Há Férias No Parque',
+        '_snipeit_parque_em_movimento_verao_68' => 'Parque em Movimento Verão',
+        '_snipeit_parque_em_movimento_pascoa_69' => 'Parque em Movimento Páscoa',
+        '_snipeit_aaaf_caf_ferias_pascoa_70' => 'AAAF/CAF Férias Páscoa',
+        '_snipeit_aaaf_caf_ferias_verao_71' => 'AAAF/CAF Férias Verão',
+        '_snipeit_parque_em_movimento_natal_72' => 'Parque em Movimento Natal',
+        '_snipeit_aaaf_caf_ferias_carnaval_73' => 'AAAF/CAF Férias Carnaval',
+        '_snipeit_ail_setembro_76' => 'AIL Setembro',
+        '_snipeit_parque_em_movimento_setembro_77' => 'Parque em Movimento Setembro',
+    ];
+
+    // Campos que começam por "_snipeit_programa_"
+    $automaticos = [];
+
+    foreach (Schema::getColumnListing('assets') as $column) {
+        if (Str::startsWith($column, '_snipeit_programa_')) {
+            // Formatar nome (ex: "_snipeit_programa_teste_de_programa_78" → "Teste de Programa")
+            $semPrefixo = preg_replace('/^_snipeit_programa_/', '', $column);
+            $semSufixo = preg_replace('/_\d+$/', '', $semPrefixo); // remove _78
+            $label = Str::of($semSufixo)->replace('_', ' ')->title();
+            $automaticos[$column] = $label;
+        }
     }
+
+    return $fixed + $automaticos; // Junta os fixos com os automáticos
+}
+
 
 
     public function exportar(Request $request)

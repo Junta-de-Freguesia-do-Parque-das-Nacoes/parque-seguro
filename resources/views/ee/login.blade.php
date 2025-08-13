@@ -51,7 +51,7 @@
 
             /* Paddings do card-body para serem idênticos à página de "Código de Acesso" que usava p-4 pt-3 */
             .card-body.login-body {
-                padding-top: 1rem;    /* Equivalente ao pt-3 */
+                padding-top: 1rem;     /* Equivalente ao pt-3 */
                 padding-right: 2rem;   /* Equivalente ao p-4 */
                 padding-bottom: 2rem;  /* Equivalente ao p-4 */
                 padding-left: 2rem;    /* Equivalente ao p-4 */
@@ -116,7 +116,7 @@
                 background-color: #004080; /* Cor de fundo EXPLICITAMENTE azul */
                 border-color: #004080; /* Cor da borda EXPLICITAMENTE azul */
                 /* A propriedade display será 'inline-block' herdada de .btn.
-                   Se .w-100 for aplicado, ele se tornará 'block' ou terá width 100%. */
+                    Se .w-100 for aplicado, ele se tornará 'block' ou terá width 100%. */
             }
             .btn-primary-custom:hover {
                 color: #ffffff;
@@ -129,6 +129,11 @@
             .alert {
                 position: relative; padding: 1rem 1rem; margin-bottom: 1rem;
                 border: 1px solid transparent; border-radius: 0.25rem;
+            }
+            .alert-info-custom {
+                color: #055160;
+                background-color: #cff4fc;
+                border-color: #b6effb;
             }
             .alert-success { color: #0f5132; background-color: #d1e7dd; border-color: #badbcc; }
             .alert-danger { color: #842029; background-color: #f8d7da; border-color: #f5c2c7; }
@@ -194,12 +199,15 @@
                         <div class="alert alert-danger">{{ $errors->first() }}</div>
                     @endif
                     @if (session('error'))
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
-    </div>
-@endif
+                        <div class="alert alert-danger alert-dismissible show" role="alert">
+                            {{ session('error') }}
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+                        </div>
+                    @endif
 
+                    <div class="alert alert-info-custom mt-2 w-100" role="alert">
+                        Este acesso é exclusivo para **Encarregados de Educação** que já tenham o seu e-mail registado nos serviços da JFPN. Caso o seu e-mail não seja reconhecido, por favor, contacte-nos através do e-mail **<a href="mailto:parque.seguro@jf-parquedasnacoes.pt" style="color: black; font-weight: bold;">parque.seguro@jf-parquedasnacoes.pt</a>** para regularizar a sua situação.
+                    </div>
 
                     <form method="POST" action="{{ route('ee.sendCode') }}">
                         @csrf
@@ -208,8 +216,8 @@
                             <div class="input-group-custom">
                                 <span class="input-icon"><i class="fas fa-envelope"></i></span>
                                 <input type="email" name="email" id="email" class="form-control form-control-lg"
-                                       placeholder="exemplo@dominio.pt" value="{{ old('email') }}" required autofocus
-                                       aria-describedby="emailHelp" autocomplete="email">
+                                        placeholder="exemplo@dominio.pt" value="{{ old('email') }}" required autofocus
+                                        aria-describedby="emailHelp" autocomplete="email">
                             </div>
                             <small id="emailHelp" class="form-text text-muted mt-2">
                                 Será enviado um código para este email.

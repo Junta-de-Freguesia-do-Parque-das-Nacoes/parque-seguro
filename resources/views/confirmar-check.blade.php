@@ -234,6 +234,8 @@
 @php
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use Illuminate\Support\Arr;
 
 /**
  * Função que processa datas individuais ou intervalos e devolve coleção de Carbon dos dias correspondentes.
@@ -271,26 +273,26 @@ function expandirDatas($stringDatas) {
         });
 }
 
-// Lista de campos personalizados com checkbox com inscrição por datas
-$programasCheckbox = [
-    '_snipeit_ha_ferias_no_parque_67' => 'Há Férias no Parque',
-    '_snipeit_parque_em_movimento_verao_68' => 'Parque em Movimento Verão',
-    '_snipeit_parque_em_movimento_pascoa_69' => 'Parque em Movimento Páscoa',
-    '_snipeit_aaaf_caf_ferias_pascoa_70' => 'AAAF/CAF Férias Páscoa',
-    '_snipeit_aaaf_caf_ferias_verao_71' => 'AAAF/CAF Férias Verão',
-    '_snipeit_parque_em_movimento_natal_72' => 'Parque em Movimento Natal',
-    '_snipeit_aaaf_caf_ferias_carnaval_73' => 'AAAF/CAF Férias Carnaval',
-];
+$customFields = $utente->toArray();
+$programasCheckbox = [];
+$iconesProgramas = [];
 
-$iconesProgramas = [
-    '_snipeit_ha_ferias_no_parque_67' => '🏖️',
-    '_snipeit_parque_em_movimento_verao_68' => '🌞',
-    '_snipeit_parque_em_movimento_pascoa_69' => '🐣',
-    '_snipeit_aaaf_caf_ferias_pascoa_70' => '🐰',
-    '_snipeit_aaaf_caf_ferias_verao_71' => '⛱️',
-    '_snipeit_parque_em_movimento_natal_72' => '🎄',
-    '_snipeit_aaaf_caf_ferias_carnaval_73' => '🎭',
-];
+foreach ($customFields as $campo => $valor) {
+    if (Str::startsWith($campo, '_snipeit_') && is_string($valor) && Str::contains($valor, '/')) {
+        $nomeCampo = Str::after($campo, '_snipeit_');
+$nomeCampo = preg_replace('/_\d+$/', '', $nomeCampo); // remove _79
+
+// Remover "programa_" do início se existir
+$nomeCampo = preg_replace('/^programa_/', '', $nomeCampo);
+
+$nomeCampo = ucwords(str_replace('_', ' ', $nomeCampo));
+
+
+        $programasCheckbox[$campo] = trim($nomeCampo);
+        $iconesProgramas[$campo] = '📅';
+    }
+}
+
 
 $hoje = Carbon::today();
 $programasHoje = [];

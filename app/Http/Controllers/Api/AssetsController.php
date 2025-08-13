@@ -33,6 +33,7 @@ use Illuminate\Http\Request;
 use App\Http\Requests\ImageUploadRequest;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Str;
 
 
 /**
@@ -169,33 +170,36 @@ if ((! is_null($filter)) && (count($filter)) > 0) {
 }
 
 
+// Passo 1: Lista inicial com os programas fixos
 $program_fields = [
-    '_snipeit_ha_ferias_no_parque_67',
-    '_snipeit_parque_em_movimento_verao_68',
-    '_snipeit_parque_em_movimento_pascoa_69',
-    '_snipeit_aaaf_caf_ferias_pascoa_70',
-    '_snipeit_aaaf_caf_ferias_verao_71',
-    '_snipeit_parque_em_movimento_natal_72',
-    '_snipeit_aaaf_caf_ferias_carnaval_73',
+    'Há Férias no Parque' => '_snipeit_ha_ferias_no_parque_67',
+    'Parque em Movimento Verão' => '_snipeit_parque_em_movimento_verao_68',
+    'Parque em Movimento Páscoa' => '_snipeit_parque_em_movimento_pascoa_69',
+    'AAAF/CAF Férias Páscoa' => '_snipeit_aaaf_caf_ferias_pascoa_70',
+    'AAAF/CAF Férias Verão' => '_snipeit_aaaf_caf_ferias_verao_71',
+    'Parque em Movimento Natal' => '_snipeit_parque_em_movimento_natal_72',
+    'AAAF/CAF Férias Carnaval' => '_snipeit_aaaf_caf_ferias_carnaval_73',
 ];
 
+// Passo 2: Adiciona novos campos dinamicamente
+foreach (\Schema::getColumnListing('assets') as $coluna) {
+    if (Str::startsWith($coluna, '_snipeit_programa_')) {
+        $nomeFormatado = 'Programa ' . ucwords(str_replace('_', ' ', str_replace('_snipeit_programa_', '', $coluna)));
+
+        if (!in_array($coluna, $program_fields)) {
+            $program_fields[$nomeFormatado] = $coluna;
+        }
+    }
+}
+
+// Passo 3: Filtra se foi selecionado um programa
 if ($request->filled('programa')) {
-    $campo = match($request->input('programa')) {
-        'Há Férias No Parque' => '_snipeit_ha_ferias_no_parque_67',
-        'Parque em Movimento Verão' => '_snipeit_parque_em_movimento_verao_68',
-        'Parque em Movimento Páscoa' => '_snipeit_parque_em_movimento_pascoa_69',
-        'AAAF/CAF Férias Páscoa' => '_snipeit_aaaf_caf_ferias_pascoa_70',
-        'AAAF/CAF Férias Verão' => '_snipeit_aaaf_caf_ferias_verao_71',
-        'Parque em Movimento Natal' => '_snipeit_parque_em_movimento_natal_72',
-        'AAAF/CAF Férias Carnaval' => '_snipeit_aaaf_caf_ferias_carnaval_73',
-        default => null,
-    };
+    $campo = $program_fields[$request->input('programa')] ?? null;
 
     if ($campo) {
         $assets->whereNotNull($campo)->where($campo, '!=', '');
     }
 }
-
 
         
 

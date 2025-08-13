@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Asset;
 use App\Models\CustomField;
-use Schema;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Console\Command;
 

@@ -73,10 +73,11 @@ public function enviarCodigo(Request $request)
         ->first();
 
     // Segurança: evitar enumeração de emails
-    if (!$responsavel) {
-        return redirect()->route('ee.mostrar-form-codigo', ['email' => $request->email])
-            ->with('success', 'Se o email estiver registado, um código será enviado.');
-    }
+   if (!$responsavel) {
+    // Apenas redireciona de volta para o login com uma mensagem de erro
+    Log::warning("Tentativa de login EE com email não registado ou sem utentes: {$request->email}");
+    return redirect()->route('ee.login')->with('error', 'O email introduzido não corresponde a um Encarregado de Educação registado. Por favor, verifique o email ou contacte-nos se precisar de ajuda.');
+}
 
     // Geração e armazenamento do código
     $codigo = Str::upper(Str::random(6));
@@ -247,15 +248,7 @@ public function dashboard()
     }
 
     // Dados dos programas (para exibir na interface)
-    $programas = [
-        '_snipeit_ha_ferias_no_parque_67' => ['nome' => 'Há Férias no Parque', 'icone' => '🏖️'],
-        '_snipeit_parque_em_movimento_verao_68' => ['nome' => 'Parque em Movimento Verão', 'icone' => '🌞'],
-        '_snipeit_parque_em_movimento_pascoa_69' => ['nome' => 'Parque em Movimento Páscoa', 'icone' => '🐣'],
-        '_snipeit_aaaf_caf_ferias_pascoa_70' => ['nome' => 'Férias Páscoa (AAAF/CAF)', 'icone' => '🐰'],
-        '_snipeit_aaaf_caf_ferias_verao_71' => ['nome' => 'Férias Verão (AAAF/CAF)', 'icone' => '⛱️'],
-        '_snipeit_parque_em_movimento_natal_72' => ['nome' => 'Parque em Movimento Natal', 'icone' => '🎄'],
-        '_snipeit_aaaf_caf_ferias_carnaval_73' => ['nome' => 'Férias Carnaval (AAAF/CAF)', 'icone' => '🎭'],
-    ];
+    $programas = $this->getProgramasDinamicos();
 
     // Retorna a view com as informações do Encarregado de Educação, educandos, responsáveis e QR Codes
     return view('ee.dashboard', [
@@ -267,6 +260,23 @@ public function dashboard()
     ]);
 }
 
+private function getProgramasDinamicos()
+{
+    $colunas = Schema::getColumnListing('assets');
+
+    $programas = [];
+
+    foreach ($colunas as $coluna) {
+        if (Str::startsWith($coluna, '_snipeit_programa_')) {
+            $slug = str_replace('_snipeit_programa_', '', $coluna);
+            $nome = ucwords(str_replace('_', ' ', $slug));
+            $icone = '📌'; // ícone genérico, podes ajustar por nome se quiseres
+            $programas[$coluna] = ['nome' => $nome, 'icone' => $icone];
+        }
+    }
+
+    return $programas;
+}
 
 
 public function logout(Request $request) // <-- Certifica-te que 'Request $request' está presente

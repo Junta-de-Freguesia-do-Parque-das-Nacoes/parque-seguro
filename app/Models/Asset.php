@@ -2015,6 +2015,39 @@ public function responsaveis()
         });
     }
 
+/**
+ * Acessor para barcode2d: Gera dinamicamente o QR code com URL baseado no ID do ativo.
+ *
+ * @return array
+ */
+protected function barcode2d(): Attribute
+{
+    return Attribute::make(
+        get: fn () => [
+            'type' => 'QRCODE,H',
+            'content' => "https://parque-seguro.jf-parquedasnacoes.pt:8126/confirmar-check/{$this->id}"
+        ],
+    );
+}
 
+protected function fields(): Attribute
+{
+    return Attribute::make(
+        get: function () {
+            $customFields = [];
+            $attributes = $this->getAttributes();
+            foreach ($attributes as $key => $value) {
+                if (str_starts_with($key, '_snipeit_') && !empty($value)) {
+                    $label = ucwords(str_replace('_', ' ', preg_replace('/_snipeit_(.*?)_\d+/', '$1', $key)));
+                    $customFields[] = [
+                        'label' => $label,
+                        'value' => $value
+                    ];
+                }
+            }
+            return $customFields;
+        },
+    );
+}
 
 }

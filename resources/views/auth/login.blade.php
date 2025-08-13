@@ -3,7 +3,7 @@
 {{-- Conteúdo da página --}}
 @section('content')
 
-    <form role="form" action="{{ url('/login') }}" method="POST" autocomplete="{{ (config('auth.login_autocomplete') === true) ? 'on' : 'off'  }}">
+    <form role="form" action="{{ url('/login') }}" method="POST" autocomplete="{{ (config('auth.login_autocomplete') === true) ? 'on' : 'off' }}">
         <input type="hidden" name="_token" value="{{ csrf_token() }}" />
 
     <div class="container">
@@ -15,6 +15,12 @@
                 </div>
             </div>
         </div>
+        <div class="preferences-link" style="display: flex; justify-content: center; align-items: center; width: 100%; margin-top: 20px;">
+        <a href="https://parque-seguro.jf-parquedasnacoes.pt:8126/ee/login" style="display: inline-flex; align-items: center; padding: 10px 15px; background-color: #1976d2; color: #fff; text-decoration: none; border-radius: 5px; font-size: 0.9em; width: auto;">
+            <img src="https://parque-seguro.jf-parquedasnacoes.pt:8126/img/logoportal_ee.png" alt="Logo do Portal EE" style="width: 24px; height: auto; margin-right: 8px;">
+            Aceder ao Portal do Encarregado de Educação
+        </a>
+    </div>
 
         <!-- Hack para evitar preenchimento automático do Chrome -->
         <input type="text" name="prevent_autofill" id="prevent_autofill" value="" style="display:none;" aria-hidden="true">
@@ -29,7 +35,7 @@
                         <br><br>
                         <a href="{{ route('google.redirect')  }}" class="btn btn-block btn-social btn-google btn-lg">
                             <i class="fa-brands fa-google"></i>
-                            Iniciar sessão com o Google
+                           Acesso Interno: Iniciar sessão
                         </a>
 
                         <div class="separator">{{ strtoupper('ou') }}</div>
@@ -37,7 +43,7 @@
 
                     <div class="box login-box">
                         <div class="box-header with-border">
-                            <h1 class="box-title"> Iniciar Sessão</h1>
+                            <h1 class="box-title"> Acesso Interno: Iniciar Sessão </h1>
                         </div>
 
                         <div class="login-box-body">
@@ -120,6 +126,7 @@
             </div> <!-- end row -->
         </div> <!-- end container -->
     </form>
+
 
     <script>
   document.addEventListener('DOMContentLoaded', function () {

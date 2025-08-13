@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "a2c5eb76fc33b1666008152e3201451f",
+    "content-hash": "94433242b1fa8f2e88c8270b1a767cae",
     "packages": [
         {
             "name": "alek13/slack",

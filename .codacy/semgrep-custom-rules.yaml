@@ -1,0 +1,27 @@
+rules:
+  - id: use-strict-comparison
+    pattern: $VAR == $VAL
+    message: "Use '===' em vez de '==' para comparações seguras."
+    severity: WARNING
+    languages: [php]
+    metadata:
+      category: best-practice
+
+  - id: avoid-exec
+    pattern: exec(...)
+    message: "Evite usar exec(), pois pode permitir execução de comandos inseguros."
+    severity: ERROR
+    languages: [php]
+
+  - id: avoid-eval
+    pattern: eval(...)
+    message: "Evite usar eval(), pois permite execução arbitrária de código."
+    severity: ERROR
+    languages: [php]
+
+  - id: avoid-unserialize
+    pattern: unserialize(...)
+    message: "Evite usar unserialize() com dados não confiáveis."
+    severity: ERROR
+    languages: [php]
+
