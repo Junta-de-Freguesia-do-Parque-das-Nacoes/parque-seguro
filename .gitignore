@@ -119,3 +119,8 @@ Thumbs.db
 *.PNG
 *.GIF
 gitleaks_report_final.json
+venv-semgrep/
+results.sarif
+semgrep-*.json
+fixer-output.txt
+exec-usages.txt
