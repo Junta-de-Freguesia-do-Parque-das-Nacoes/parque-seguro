@@ -124,3 +124,8 @@ results.sarif
 semgrep-*.json
 fixer-output.txt
 exec-usages.txt
+venv-semgrep/
+results.sarif
+semgrep-*.json
+exec-usages.txt
+fixer-output.txt
